@@ -1,103 +1,178 @@
-import Image from "next/image";
+// app/page.tsx
+"use client";
+import Head from "next/head";
+import { useEffect, useState } from "react";
 
-export default function Home() {
+type BrowserInfo = {
+  userAgent: string;
+  language: string;
+  timezone: string;
+  screenRes: string;
+  platform: string;
+  memory: string;
+  cookieEnabled: boolean;
+  connection: { type: string; downlink: number };
+  battery: string | { level: string; charging: string };
+};
+
+type LocationInfo = {
+  ip: string;
+  city: string;
+  region: string;
+  country_name: string;
+  org: string;
+  error?: string;
+};
+
+export default function Page() {
+  const [info, setInfo] = useState<BrowserInfo | null>(null);
+  const [location, setLocation] = useState<LocationInfo | null>(null);
+
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const language = navigator.language;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const screenRes = `${window.screen.width}x${window.screen.height}`;
+    const platform = navigator.platform;
+    const cookieEnabled = navigator.cookieEnabled;
+    const memory = navigator.deviceMemory?.toString() || "unknown";
+    const connection = (navigator as any).connection || {};
+
+    const batteryPromise = navigator.getBattery
+      ? navigator.getBattery()
+      : Promise.resolve<BatteryManager | null>(null);
+
+    batteryPromise.then((battery) => {
+      const bstr = battery
+        ? `${Math.round(battery.level * 100)}%, Charging: ${
+            battery.charging ? "Yes" : "No"
+          }`
+        : "Battery info not available";
+
+      const bInfo: BrowserInfo = {
+        userAgent: ua,
+        language,
+        timezone,
+        screenRes,
+        platform,
+        memory,
+        cookieEnabled,
+        connection: {
+          type: connection.effectiveType || "",
+          downlink: connection.downlink || 0,
+        },
+        battery: bstr,
+      };
+
+      setInfo(bInfo);
+      if (location) sendReport(bInfo, location);
+    });
+
+    fetch("https://ipapi.co/json")
+      .then((r) => r.json())
+      .then((loc: LocationInfo) => {
+        setLocation(loc);
+        if (info) sendReport(info, loc);
+      })
+      .catch(() => setLocation({ error: "Can't fetch IP location" } as any));
+
+    function sendReport(bInfo: BrowserInfo, loc: LocationInfo) {
+      fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ browserInfo: bInfo, location: loc }),
+      }).catch(() => {});
+    }
+  }, [info, location]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <>
+      <Head>
+        <title>Korvynox | What the web knows about you</title>
+        <meta
+          name="description"
+          content="Korvynox shows everything your browser leaks: IP, location, device data."
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+        <meta
+          name="keywords"
+          content="korvynox, browser info, ip checker, device fingerprint, who am i"
+        />
+        <meta name="robots" content="index,follow" />
+      </Head>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <main className="p-6 space-y-6">
+        <h1 className="text-2xl font-bold">
+          🕵️ Korvynox: Вот что я о&nbsp;тебе знаю
+        </h1>
+
+        <div className="border rounded-xl p-4 shadow space-y-2">
+          {info ? (
+            <>
+              <p>
+                <strong>User Agent:</strong> {info.userAgent}
+              </p>
+              <p>
+                <strong>Language:</strong> {info.language}
+              </p>
+              <p>
+                <strong>Time Zone:</strong> {info.timezone}
+              </p>
+              <p>
+                <strong>Screen Res:</strong> {info.screenRes}
+              </p>
+              <p>
+                <strong>Platform:</strong> {info.platform}
+              </p>
+              <p>
+                <strong>Device Memory:</strong> {info.memory} GB
+              </p>
+              <p>
+                <strong>Cookies Enabled:</strong>{" "}
+                {info.cookieEnabled ? "Yes" : "No"}
+              </p>
+              <p>
+                <strong>Connection:</strong> {info.connection.type} ·{" "}
+                {info.connection.downlink} Mbps
+              </p>
+              <p>
+                <strong>Battery:</strong>{" "}
+                {typeof info.battery === "string"
+                  ? info.battery
+                  : `${info.battery.level}, Charging: ${info.battery.charging}`}
+              </p>
+            </>
+          ) : (
+            <p>Loading device data…</p>
+          )}
+        </div>
+
+        <div className="border rounded-xl p-4 shadow space-y-2">
+          <h2 className="text-xl font-semibold">📍 Location Info</h2>
+          {location?.error ? (
+            <p>{location.error}</p>
+          ) : location ? (
+            <>
+              <p>
+                <strong>IP:</strong> {location.ip}
+              </p>
+              <p>
+                <strong>City:</strong> {location.city}
+              </p>
+              <p>
+                <strong>Region:</strong> {location.region}
+              </p>
+              <p>
+                <strong>Country:</strong> {location.country_name}
+              </p>
+              <p>
+                <strong>ISP:</strong> {location.org}
+              </p>
+            </>
+          ) : (
+            <p>Loading geo data…</p>
+          )}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    </>
   );
 }
