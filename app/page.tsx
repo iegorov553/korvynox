@@ -38,11 +38,12 @@ export default function Page() {
     const memory = (navigator as any).deviceMemory?.toString() || "unknown";
     const connection = (navigator as any).connection || {};
 
-    const batteryPromise = navigator.getBattery
-      ? navigator.getBattery()
-      : Promise.resolve<BatteryManager | null>(null);
+    const batteryPromise = (navigator as any).getBattery
+      ? (navigator as any).getBattery()
+      : Promise.resolve<any>(null);
 
-    batteryPromise.then((battery) => {
+
+    batteryPromise.then((battery: any) => {
       const bstr = battery
         ? `${Math.round(battery.level * 100)}%, Charging: ${
             battery.charging ? "Yes" : "No"
