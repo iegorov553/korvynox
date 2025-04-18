@@ -35,7 +35,7 @@ export default function Page() {
     const screenRes = `${window.screen.width}x${window.screen.height}`;
     const platform = navigator.platform;
     const cookieEnabled = navigator.cookieEnabled;
-    const memory = navigator.deviceMemory?.toString() || "unknown";
+    const memory = (navigator as any).deviceMemory?.toString() || "unknown";
     const connection = (navigator as any).connection || {};
 
     const batteryPromise = navigator.getBattery
