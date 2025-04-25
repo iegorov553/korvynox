@@ -78,11 +78,17 @@ export default function ScanReveal({
 
     const tl = gsap.timeline({ repeat: -1, repeatDelay: 8 });
     tl.fromTo(
-      { y: 0 },
-      { y: bounds.height, duration: 2, ease: "none", onUpdate() {
-        // @ts-ignore – gsap proxies y
-        renderFrame(this.targets()[0].y);
-      } }
+     { y: 0 },                // targets
+     { y: 0 },                // fromVars  (нужно хотя бы пустое значение)
+     {
+       y: bounds.height,
+       duration: 2,
+       ease: "none",
+       onUpdate() {
+         // @ts-ignore
+         renderFrame(this.targets()[0].y);
+       },
+     }
     );
 
     return () => { tl.kill(); };
