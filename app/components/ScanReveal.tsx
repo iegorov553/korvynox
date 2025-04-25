@@ -85,7 +85,7 @@ export default function ScanReveal({
       } }
     );
 
-    return () => tl.kill();
+    return () => { tl.kill(); };
   }, [text, bounds.width, bounds.height, font, color, scanColor]);
 
   return (
