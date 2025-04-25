@@ -48,7 +48,7 @@ export default function Page() {
       ? (navigator as any).getBattery().then((bat: any) => ({ level: bat.level * 100, charging: bat.charging }))
       : Promise.resolve(null);
 
-    const browserPromise = batteryPromise.then((battery) => ({
+    const browserPromise = batteryPromise.then((battery: any) => ({
       userAgent: ua,
       language,
       timezone,
