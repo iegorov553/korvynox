@@ -14,7 +14,7 @@
 "use client";
 import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
-import { useMeasure } from "react-use-measure";
+import useMeasure from "react-use-measure";
 
 interface ScanRevealProps {
   text: string;
