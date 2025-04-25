@@ -21,6 +21,27 @@ import ScanReveal from "./components/ScanReveal";
 
 // ... импорт типов / useState как раньше ...
 
+
+type BrowserInfo = {
+  userAgent: string;
+  language: string;
+  timezone: string;
+  screenRes: string;
+  platform: string;
+  memory: number;
+  connection: { type: string; downlink: number };
+  battery: { level: number; charging: boolean } | null;
+};
+
+type LocationInfo = {
+  ip: string;
+  city: string;
+  region: string;
+  country_name: string;
+  org: string;
+};
+
+
 export default function Page() {
   const [info, setInfo] = useState<BrowserInfo | null>(null);
   const [location, setLocation] = useState<LocationInfo | null>(null);
