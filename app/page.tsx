@@ -29,62 +29,54 @@ export default function Page() {
   const [location, setLocation] = useState<LocationInfo | null>(null);
 
   useEffect(() => {
-    const ua = navigator.userAgent;
-    const language = navigator.language;
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const screenRes = `${window.screen.width}x${window.screen.height}`;
-    const platform = navigator.platform;
-    const cookieEnabled = navigator.cookieEnabled;
-    const memory = (navigator as any).deviceMemory?.toString() || "unknown";
-    const connection = (navigator as any).connection || {};
-
-    const batteryPromise = (navigator as any).getBattery
-      ? (navigator as any).getBattery()
-      : Promise.resolve<any>(null);
-
-
-    batteryPromise.then((battery: any) => {
-      const bstr = battery
-        ? `${Math.round(battery.level * 100)}%, Charging: ${
-            battery.charging ? "Yes" : "No"
-          }`
-        : "Battery info not available";
-
-      const bInfo: BrowserInfo = {
-        userAgent: ua,
-        language,
-        timezone,
-        screenRes,
-        platform,
-        memory,
-        cookieEnabled,
+  // 1) промис браузерных данных
+  const browserPromise = (navigator as any).getBattery
+    ? (navigator as any).getBattery().then((battery: any) => ({
+        userAgent: navigator.userAgent,
+        language:  navigator.language,
+        timezone:  Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screenRes: `${window.screen.width}x${window.screen.height}`,
+        platform:  navigator.platform,
+        memory:    (navigator as any).deviceMemory?.toString() || "unknown",
+        cookieEnabled: navigator.cookieEnabled,
         connection: {
-          type: connection.effectiveType || "",
-          downlink: connection.downlink || 0,
+          type: (navigator as any).connection?.effectiveType || "",
+          downlink: (navigator as any).connection?.downlink || 0,
         },
-        battery: bstr,
-      };
+        battery: battery
+          ? `${Math.round(battery.level * 100)}%, Charging: ${battery.charging?"Yes":"No"}`
+          : "Battery info not available",
+      }))
+    : Promise.resolve({
+        userAgent: navigator.userAgent,
+        language:  navigator.language,
+        timezone:  Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screenRes: `${window.screen.width}x${window.screen.height}`,
+        platform:  navigator.platform,
+        memory:    (navigator as any).deviceMemory?.toString() || "unknown",
+        cookieEnabled: navigator.cookieEnabled,
+        connection: { type: "", downlink: 0 },
+        battery: "Battery info not available",
+      });
 
-      setInfo(bInfo);
-      if (location) sendReport(bInfo, location);
-    });
+  // 2) промис гео
+  const geoPromise = fetch("https://ipapi.co/json")
+    .then(r => r.json())
+    .catch(() => ({ ip: "unknown", city: "unknown", region: "unknown", country_name: "unknown", org: "unknown" }));
 
-    fetch("https://ipapi.co/json")
-      .then((r) => r.json())
-      .then((loc: LocationInfo) => {
-        setLocation(loc);
-        if (info) sendReport(info, loc);
-      })
-      .catch(() => setLocation({ error: "Can't fetch IP location" } as any));
+  // 3) ждём оба
+  Promise.all([browserPromise, geoPromise]).then(([browserInfo, locationInfo]) => {
+    setInfo(browserInfo);
+    setLocation(locationInfo);
+    // единственный POST
+    fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ browserInfo, location: locationInfo }),
+    }).catch(() => {});
+  });
+}, []); // пустые зависимости — код выполнится только 1 раз при монтировании
 
-    function sendReport(bInfo: BrowserInfo, loc: LocationInfo) {
-      fetch("/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browserInfo: bInfo, location: loc }),
-      }).catch(() => {});
-    }
-  }, [info, location]);
 
   return (
     <>
